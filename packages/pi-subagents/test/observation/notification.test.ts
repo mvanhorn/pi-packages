@@ -8,6 +8,7 @@ import {
   NotificationManager,
 } from "#src/observation/notification";
 import { createTestSubagent } from "#test/helpers/make-subagent";
+import { createSubagentSessionStub, toSubagentSession } from "#test/helpers/mock-session";
 
 /** Options a notification carrier hands `pi.sendMessage`. */
 interface SendOptions {
@@ -265,13 +266,30 @@ describe("NotificationManager", () => {
   it("surfaces a declared question as answerable in the nudge", () => {
     const args = makeArgs();
     const system = makeManager(args);
-    system.sendCompletion(
-      createTestSubagent({ id: "agent-3", pendingQuestion: "Which config?" }),
-    );
+    const record = createTestSubagent({ id: "agent-3", pendingQuestion: "Which config?" });
+    record.subagentSession = toSubagentSession(createSubagentSessionStub());
+    system.sendCompletion(record);
     const content = (args.sendMessage.mock.calls[0][0] as { content: string }).content;
     expect(content).toContain("This agent is waiting on an answer:");
     expect(content).toContain("Which config?");
     expect(content).toContain('resume: "agent-3"');
+  });
+
+  it("does not advertise a resume when a delayed nudge flushes after session release", async () => {
+    const args = makeArgs();
+    const system = makeManager(args);
+    const record = createTestSubagent({ id: "agent-3", pendingQuestion: "Which config?" });
+    record.subagentSession = toSubagentSession(createSubagentSessionStub());
+
+    system.onParentAgentStart();
+    system.sendCompletion(record);
+    await record.releaseSession();
+    system.onParentAgentSettled();
+
+    const content = (args.sendMessage.mock.calls[0][0] as { content: string }).content;
+    expect(content).toContain('get_subagent_result("agent-3")');
+    expect(content).not.toContain("waiting on an answer");
+    expect(content).not.toContain("resume:");
   });
 
   it("names where a teardown saved the agent's work", () => {

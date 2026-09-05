@@ -81,13 +81,18 @@ export interface OutcomeBody {
 
 /**
  * The trailing affordance for a child that ended its turn with a question,
- * naming the exact call that answers it. Empty when the child asked nothing.
+ * naming the exact call that answers it. Empty when the child asked nothing
+ * or the record no longer satisfies the resume preconditions.
  *
- * Takes the id and question rather than a record: the two facts it needs, so a
- * carrier holding any shape can call it.
+ * Takes the facts rather than a record, so a carrier holding any shape can
+ * call it without re-deriving resumability.
  */
-export function renderQuestionAffordance(agentId: string, question: string | undefined): string {
-	if (!question) return "";
+export function renderQuestionAffordance(
+	agentId: string,
+	question: string | undefined,
+	canResume: boolean,
+): string {
+	if (!question || !canResume) return "";
 	const quoted = question
 		.split("\n")
 		.map((line) => `  ${line}`)

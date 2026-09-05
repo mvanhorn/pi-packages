@@ -68,22 +68,26 @@ describe("status vocabulary", () => {
 
 describe("renderQuestionAffordance", () => {
 	it("names the exact resume call that answers the question", () => {
-		expect(renderQuestionAffordance("b15f500f-314b-49b", "Which config?")).toBe(
+		expect(renderQuestionAffordance("b15f500f-314b-49b", "Which config?", true)).toBe(
 			"\n\nThis agent is waiting on an answer:\n\n  Which config?\n\n" +
 				'Answer by calling subagent with resume: "b15f500f-314b-49b" and your answer as the prompt.',
 		);
 	});
 
 	it("renders nothing when the child asked nothing", () => {
-		expect(renderQuestionAffordance("agent-1", undefined)).toBe("");
+		expect(renderQuestionAffordance("agent-1", undefined, true)).toBe("");
 	});
 
 	it("renders nothing for an empty question", () => {
-		expect(renderQuestionAffordance("agent-1", "")).toBe("");
+		expect(renderQuestionAffordance("agent-1", "", true)).toBe("");
+	});
+
+	it("renders nothing when the question can no longer be answered by resuming", () => {
+		expect(renderQuestionAffordance("agent-1", "Which config?", false)).toBe("");
 	});
 
 	it("indents every line of a multi-line question", () => {
-		expect(renderQuestionAffordance("agent-1", "A or B?\nOr C?")).toContain("  A or B?\n  Or C?");
+		expect(renderQuestionAffordance("agent-1", "A or B?\nOr C?", true)).toContain("  A or B?\n  Or C?");
 	});
 });
 

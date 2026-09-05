@@ -191,6 +191,11 @@ export class Subagent {
 		return this.subagentSession != null;
 	}
 
+	/** Whether resume can safely re-enter this agent's live session and workspace. */
+	canResume(): boolean {
+		return this.isSessionReady() && !this.workspaceDisposed;
+	}
+
 	/**
 	 * Steer a running agent, owning the non-running rejection rule.
 	 * Returns a `rejected` outcome (with the observed status) when the agent is

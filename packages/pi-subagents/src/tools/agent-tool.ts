@@ -94,17 +94,17 @@ export class AgentTool {
 					`Agent not found: "${params.resume as string}". Records are cleared at session start/switch, so it may be from a previous session.`,
 				);
 			}
-			if (!existing.isSessionReady()) {
-				if (existing.sessionReleased) {
+			if (!existing.canResume()) {
+				if (!existing.isSessionReady()) {
+					if (existing.sessionReleased) {
+						return textResult(
+							`Agent "${params.resume as string}" had its session released after its retention window; resume is unavailable, but its result is still retrievable via get_subagent_result.`,
+						);
+					}
 					return textResult(
-						`Agent "${params.resume as string}" had its session released after its retention window; resume is unavailable, but its result is still retrievable via get_subagent_result.`,
+						`Agent "${params.resume as string}" has no active session to resume.`,
 					);
 				}
-				return textResult(
-					`Agent "${params.resume as string}" has no active session to resume.`,
-				);
-			}
-			if (existing.workspaceDisposed) {
 				return textResult(
 					`Agent "${params.resume as string}" ran in an isolated workspace that no longer ` +
 						"exists; resume is unavailable because the agent would re-enter a directory that " +
@@ -131,7 +131,7 @@ export class AgentTool {
 				`Agent ID: ${record.id}${renderStatusNote(record.status)}\n\n` +
 					renderOutcomeBody(record) +
 					renderWorkspaceNotice(record.workspaceNotice) +
-					renderQuestionAffordance(record.id, record.pendingQuestion),
+					renderQuestionAffordance(record.id, record.pendingQuestion, record.canResume()),
 				buildDetails(config.presentation.detailBase, record),
 			);
 		}

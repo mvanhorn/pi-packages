@@ -524,6 +524,17 @@ describe("Subagent — releaseSession", () => {
 		expect(record.isSessionReady()).toBe(false);
 	});
 
+	it("makes a retained record with a pending question no longer resumable", async () => {
+		const record = makeSubagent({ pendingQuestion: "Which config?" });
+		record.subagentSession = toSubagentSession(createSubagentSessionStub());
+		expect(record.canResume()).toBe(true);
+
+		await record.releaseSession();
+
+		expect(record.pendingQuestion).toBe("Which config?");
+		expect(record.canResume()).toBe(false);
+	});
+
 	it("captures outputFile so the getter still resolves it after release", async () => {
 		const record = makeSubagent();
 		record.subagentSession = toSubagentSession(createSubagentSessionStub(createMockSession(), "/path/to/session.jsonl"));
@@ -750,6 +761,32 @@ describe("Subagent — workspaceDisposed", () => {
 		const agent = createRunnableAgent({ workspaceProvider: makeWorkspaceProvider(undefined) });
 		await agent.run();
 		expect(agent.workspaceDisposed).toBe(false);
+	});
+});
+
+describe("Subagent — canResume", () => {
+	it("requires a live session", () => {
+		expect(makeSubagent({ pendingQuestion: "Which config?" }).canResume()).toBe(false);
+	});
+
+	it("does not add a status restriction when the session and workspace are available", () => {
+		const agent = makeSubagent({ status: "stopped", pendingQuestion: "Which config?" });
+		agent.subagentSession = toSubagentSession(createSubagentSessionStub());
+
+		expect(agent.canResume()).toBe(true);
+	});
+
+	it("is false after a terminal run disposed its workspace but retained its session", async () => {
+		const { agent } = await runWithWorkspace({
+			responseText: "",
+			question: "Still stuck?",
+			aborted: true,
+		});
+
+		expect(agent.isSessionReady()).toBe(true);
+		expect(agent.workspaceDisposed).toBe(true);
+		expect(agent.pendingQuestion).toBe("Still stuck?");
+		expect(agent.canResume()).toBe(false);
 	});
 });
 

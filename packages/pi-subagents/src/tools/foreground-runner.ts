@@ -137,7 +137,7 @@ export async function runForeground(
       `Agent ID: ${record.id}\n\n` +
       renderOutcomeBody(record) +
       renderWorkspaceNotice(record.workspaceNotice) +
-      renderQuestionAffordance(record.id, record.pendingQuestion),
+      renderQuestionAffordance(record.id, record.pendingQuestion, record.canResume()),
     details,
   );
 }

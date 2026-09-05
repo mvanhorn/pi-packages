@@ -38,6 +38,8 @@ export interface AgentReport {
 	transcriptPath?: string;
 	/** The question the agent ended its turn with, when it declared one. */
 	pendingQuestion?: string;
+	/** Whether the live session and workspace still satisfy the resume preconditions. */
+	canResume: boolean;
 	/** Where a teardown with no result text to carry it saved the agent's work. */
 	workspaceNotice?: string;
 }
@@ -69,7 +71,7 @@ export function formatAgentReport(report: AgentReport): string {
 	output += renderReportBody(report);
 	// Where the work went, before the call to action that follows it.
 	output += renderWorkspaceNotice(report.workspaceNotice);
-	output += renderQuestionAffordance(report.id, report.pendingQuestion);
+	output += renderQuestionAffordance(report.id, report.pendingQuestion, report.canResume);
 	if (report.conversation) {
 		output += `\n\n--- Agent Conversation ---\n${report.conversation}`;
 	}

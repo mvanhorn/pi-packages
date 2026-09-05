@@ -3,6 +3,7 @@ import { type ForegroundParams, runForeground } from "#src/tools/foreground-runn
 import { createToolDeps } from "#test/helpers/make-deps";
 import { createResolvedSpawnConfig } from "#test/helpers/make-spawn-config";
 import { createTestSubagent } from "#test/helpers/make-subagent";
+import { createSubagentSessionStub, toSubagentSession } from "#test/helpers/mock-session";
 import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
 
 function makeParams(overrides: Partial<ForegroundParams> = {}): ForegroundParams {
@@ -33,17 +34,37 @@ describe("runForeground", () => {
 
 	it("surfaces a declared question as answerable, naming the resume call", async () => {
 		const { manager } = createToolDeps();
-		manager.spawnAndWait = vi
-			.fn()
-			.mockResolvedValue(
-				createTestSubagent({ id: "agent-5", result: "Mapped them.", pendingQuestion: "Which config?" }),
-			);
+		const record = createTestSubagent({
+			id: "agent-5",
+			result: "Mapped them.",
+			pendingQuestion: "Which config?",
+		});
+		record.subagentSession = toSubagentSession(createSubagentSessionStub());
+		manager.spawnAndWait = vi.fn().mockResolvedValue(record);
 
 		const result = await runForeground(manager, makeParams(), undefined, undefined);
 
 		expect(result.content[0].text).toContain("This agent is waiting on an answer:");
 		expect(result.content[0].text).toContain("Which config?");
 		expect(result.content[0].text).toContain('resume: "agent-5"');
+	});
+
+	it("omits a stale question after the returned session was released", async () => {
+		const { manager } = createToolDeps();
+		const record = createTestSubagent({
+			id: "agent-5",
+			result: "Mapped them.",
+			pendingQuestion: "Which config?",
+		});
+		record.subagentSession = toSubagentSession(createSubagentSessionStub());
+		await record.releaseSession();
+		manager.spawnAndWait = vi.fn().mockResolvedValue(record);
+
+		const result = await runForeground(manager, makeParams(), undefined, undefined);
+
+		expect(result.content[0].text).toContain("Mapped them.");
+		expect(result.content[0].text).not.toContain("waiting on an answer");
+		expect(result.content[0].text).not.toContain("resume:");
 	});
 
 	it("adds no affordance when the agent asked nothing", async () => {

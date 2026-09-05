@@ -208,9 +208,13 @@ describe("AgentTool — resume path", () => {
 		const resumeRecord = createTestSubagent();
 		resumeRecord.subagentSession = toSubagentSession(createSubagentSessionStub(createMockSession()));
 		deps.manager.getRecord = vi.fn().mockReturnValue(resumeRecord);
-		deps.manager.resume = vi.fn().mockResolvedValue(
-			createTestSubagent({ id: "agent-9", result: "Thanks.", pendingQuestion: "And the fallback?" }),
-		);
+		const resumed = createTestSubagent({
+			id: "agent-9",
+			result: "Thanks.",
+			pendingQuestion: "And the fallback?",
+		});
+		resumed.subagentSession = toSubagentSession(createSubagentSessionStub());
+		deps.manager.resume = vi.fn().mockResolvedValue(resumed);
 
 		const result = await execute(deps, {
 			prompt: "continue",
@@ -222,6 +226,30 @@ describe("AgentTool — resume path", () => {
 		expect(result.content[0].text).toContain("This agent is waiting on an answer:");
 		expect(result.content[0].text).toContain("And the fallback?");
 		expect(result.content[0].text).toContain('resume: "agent-9"');
+	});
+
+	it("omits a follow-up question when the resumed session is no longer live", async () => {
+		const deps = createToolDeps();
+		const resumeRecord = createTestSubagent();
+		resumeRecord.subagentSession = toSubagentSession(createSubagentSessionStub());
+		deps.manager.getRecord = vi.fn().mockReturnValue(resumeRecord);
+		const resumed = createTestSubagent({
+			id: "agent-9",
+			result: "Thanks.",
+			pendingQuestion: "And the fallback?",
+		});
+		deps.manager.resume = vi.fn().mockResolvedValue(resumed);
+
+		const result = await execute(deps, {
+			prompt: "continue",
+			description: "resume",
+			subagent_type: "general-purpose",
+			resume: "agent-1",
+		});
+
+		expect(result.content[0].text).toContain("Thanks.");
+		expect(result.content[0].text).not.toContain("waiting on an answer");
+		expect(result.content[0].text).not.toContain("resume:");
 	});
 
 	it("names where a teardown saved the work of a resumed child", async () => {

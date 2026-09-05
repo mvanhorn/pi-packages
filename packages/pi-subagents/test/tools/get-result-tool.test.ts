@@ -117,6 +117,33 @@ describe("GetResultTool", () => {
 		expect(text).toContain("All done.");
 	});
 
+	it("advertises an answerable question while the session remains resumable", async () => {
+		const record = createTestSubagent({ id: "agent-7", pendingQuestion: "Which config?" });
+		record.subagentSession = toSubagentSession(createSubagentSessionStub());
+		const result = await execute(makeManager(new Map([[record.id, record]])), {
+			agent_id: record.id,
+		});
+
+		expect(result.content[0].text).toContain('resume: "agent-7"');
+	});
+
+	it("keeps a released result and transcript pointer without advertising its stale question", async () => {
+		const record = createTestSubagent({ pendingQuestion: "Which config?" });
+		record.subagentSession = toSubagentSession(
+			createSubagentSessionStub(createMockSession(), "/tasks/agent.jsonl"),
+		);
+		await record.releaseSession();
+
+		const result = await execute(makeManager(new Map([[record.id, record]])), {
+			agent_id: record.id,
+		});
+
+		expect(result.content[0].text).toContain("All done.");
+		expect(result.content[0].text).toContain("Full transcript available at: /tasks/agent.jsonl");
+		expect(result.content[0].text).not.toContain("waiting on an answer");
+		expect(result.content[0].text).not.toContain("resume:");
+	});
+
 	it("shows running message for in-progress agent", async () => {
 		const records = new Map([["agent-1", createTestSubagent({ status: "running", completedAt: undefined })]]);
 		const result = await execute(makeManager(records), { agent_id: "agent-1" });

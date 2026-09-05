@@ -20,6 +20,7 @@ function makeReport(overrides: Partial<AgentReport> = {}): AgentReport {
 		result: "All done.",
 		error: undefined,
 		stoppedWhileQueued: false,
+		canResume: true,
 		conversation: undefined,
 		transcriptPath: undefined,
 		...overrides,
@@ -107,6 +108,21 @@ describe("formatAgentReport", () => {
 
 	it("adds no affordance when the agent asked nothing", () => {
 		expect(formatAgentReport(makeReport())).not.toContain("waiting on an answer");
+	});
+
+	it("keeps the saved outcome and pointers but omits an unavailable resume", () => {
+		const text = formatAgentReport(
+			makeReport({
+				pendingQuestion: "Which config?",
+				canResume: false,
+				transcriptPath: "/tasks/agent.jsonl",
+			}),
+		);
+
+		expect(text).toContain("All done.");
+		expect(text).toContain("Full transcript available at: /tasks/agent.jsonl");
+		expect(text).not.toContain("waiting on an answer");
+		expect(text).not.toContain("resume:");
 	});
 
 	it("names where a teardown saved the agent's work", () => {
